@@ -1,51 +1,46 @@
-const Typesense = require("typesense");
-require("dotenv").config();
+const express = require('express');
+const client= require("./typesense/client");
+const app = express();
+require("./typesense/books");
 
-var fs = require("fs/promises")
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-//adding books to the collection
-const booksDemo = await fs.readFile("C:\TECH STACK\CODE\typesense demo\json\books.jsonl");
-client.collections("books").documents().import(booksDemo);
+//get method that return the given query
+app.get("/search-books", (req, res) => {
 
-//initializing the Typesense client
-let client = new Typesense.Client({
-    "nodes": [{
-        "host": "xxx.a1.typesense.net",
-        "port": "443",
-        "protocol": "https"
-    }],
-
-    "apiKey": process.env.API_KEY,
-    "connectionTimeoutSeconds": 2
-})
-
-//creating a books collection
-let booksSchema = {
-    'name': 'books',
-    'fields': [
-      {'name': 'title', 'type': 'string' },
-      {'name': 'authors', 'type': 'string[]', 'facet': true },
+    const { q } = req.query;
   
-      {'name': 'publication_year', 'type': 'int32', 'facet': true },
-      {'name': 'ratings_count', 'type': 'int32' },
-      {'name': 'average_rating', 'type': 'float' }
-    ],
-    'default_sorting_field': 'ratings_count'
-  }
+    const searchParameters = {
+      'q'         : q,
+      'query_by'  : 'title',
+      'sort_by'   : 'ratings_count:desc'
+    }
   
-  client.collections().create(booksSchema)
-    .then(function (data) {
-      console.log(data)
+    client.collections('books')
+      .documents()
+      .search(searchParameters)
+      .then(function (searchResults) {
+        res.send(searchResults)
+      }, err => { res.send(error) } )
+  });
+
+
+  //post method to add books to the collection
+  app.post('/add-book', (req, res) => {
+
+    const book = req.body;
+  
+    client.collections('books').documents().create(book).then(data => {
+      res.send(data)
+    }, err => {
+      res.send(err)
     })
+  
+  });
+  
+const port = process.env.PORT || 8080;
 
-//searching for the books
-let searchParameters = {
-    "q"         : "harry potter",
-    "query_by"  :  "title",
-    "sort_by"   :   "ratings_count:desc"
-}
-client.collections(books).documents()
-                        .search(searchParameters)
-                        .then(function(searchResults) {
-                            console.log(searchResults)
-                        })
+const server = app.listen(port, () => {
+    console.log(`App running on port ${port}...`);
+  });
