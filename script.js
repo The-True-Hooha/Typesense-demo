@@ -7,7 +7,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 //get method that return the given query
-app.get("/search-books", (req, res) => {
+app.get("/search", (req, res) => {
 
     const { q } = req.query;
   
@@ -22,7 +22,7 @@ app.get("/search-books", (req, res) => {
       .search(searchParameters)
       .then(function (searchResults) {
         res.send(searchResults)
-      }, err => { res.send(error) } )
+      }, err => { res.send(err) } )
   });
 
 
@@ -38,7 +38,10 @@ app.get("/search-books", (req, res) => {
     })
   
   });
-  
+
+  client.operations.perform('snapshot', {'snapshot_path': './typesense/backup'})
+
+
 const port = process.env.PORT || 8080;
 
 const server = app.listen(port, () => {
